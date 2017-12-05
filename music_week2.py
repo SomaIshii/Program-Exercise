@@ -38,10 +38,12 @@ NOTE_FREQ = {  # 音の周波数
 }
 BPM = 120  # 曲のテンポ：一分間に四分音符が何回なるか
 VOLUME = 0.1  # 音の大きさ
-MUSIC_SCORE = ((1, "b3", "d4"), (2, "b3", "g4"),  # アメイジンググレイスの楽譜
-               (1, "d4", "b4"), (1, "d4", "g4"), (2, "d4", "b4"),
-               (1, "c4", "a4"),
-               (2, "b3", "g4"), (1, "c4", "e4"), (2, "b3", "d4"))
+
+# リストは時間方向の流れを，タプルは和音を表す
+MUSIC_SCORE = [(1, "b3", "d4"), (2, "b3", "g4"),  # アメイジンググレイスの楽譜
+               ([(2, "d4")], [(1, "b4"), (1, "g4")]),  # ここネスト多いけど大丈夫ですかね
+               (2, "d4", "b4"), (1, "c4", "a4"),
+               (2, "b3", "g4"), (1, "c4", "e4"), (2, "b3", "d4")]
 
 
 def generate_music_wave(music_score):
@@ -54,7 +56,6 @@ def generate_music_wave(music_score):
     music_wave = [generate_note_wave(note)
                   for note in music_score]
     music_wave = np.concatenate(music_wave, axis=0)
-    music_wave *= VOLUME
     return music_wave
 
 
@@ -64,7 +65,23 @@ def generate_note_wave(score):
     返り値は1次元のndarray
 
     note:音符，和音も表す，(音の長さ，"音階1","音階2",...)で表されるタプル
+    noteはたまに不快ネスト([(音の長さ1, "音階",...),...],[(音の長さ2, "音階"),...])
+    となるのでそれを判断して分岐させる
     '''
+    # scoreからリストになっているやつらを抽出する
+    # リストがあるということは，音の長さが違う和音が存在しているということ
+    alt_length_score = [sharo for sharo in score if isinstance(sharo, list)]
+    # もし音の長さが違う和音が存在するなら
+    if alt_length_score:
+        # それぞれを楽譜とみなして別々に波形を生成
+        alt_length_note = np.array([generate_music_wave(
+            rise) for rise in alt_length_score])
+        # 別々に生成された波形を足し合わせて和音の波形ができる
+        note = np.sum(alt_length_note, axis=0)
+        # できた和音の波形を返して終わり
+        return note
+
+    # 和音の長さが全部同じになったら波形を生成
     length = int(score[0] * (60 / BPM) * RATE)  # 音のなる長さ
     factor = np.array([2 * np.pi * NOTE_FREQ[scale] /
                        RATE for scale in score[1:]])
@@ -72,7 +89,6 @@ def generate_note_wave(score):
     note = np.sin(factor[:, np.newaxis] * np.arange(length))
     # 平均をとって和音にする
     note = np.sum(note, axis=0)
-
     return note
 
 
@@ -82,6 +98,8 @@ def play_sound(wave):
 
     wave:波形が記された1次元ndarray配列
     '''
+    # 音量を変える
+    wave *= VOLUME
     # pyaudioのストリームを開く
     # streamへ波形を書き込みすると音が出る
     pa = pyaudio.PyAudio()
