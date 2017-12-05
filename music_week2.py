@@ -3,39 +3,22 @@ import pyaudio
 
 RATE = 44100  # sample rate
 CHANNEL_NUM = 1  # チャンネル数 今回はモノラルなので1
-NOTE_FREQ = {  # 音の周波数
-    "d6": 1174.659,
-    "c#6": 1108.731,
-    "c6": 1046.502,
-    "b5": 987.767,
-    "a#5": 932.328,
-    "a5": 880.000,
-    "g#5": 830.609,
-    "g5": 783.991,
-    "f#5": 739.989,
-    "f5": 698.456,
-    "e5": 659.255,
-    "d#5": 622.245,
-    "d5": 587.330,
-    "c#5": 554.365,
-    "c5": 523.251,
-    "b4": 493.883,
-    "a#4": 466.164,
-    "a4": 440.000,
-    "g#4": 415.305,
-    "g4": 391.995,
-    "f#4": 369.994,
-    "f4": 349.228,
-    "e4": 329.628,
-    "d#4": 311.127,
-    "d4": 293.665,
-    "c#4": 277.183,
-    "c4": 261.626,
-    "b3": 246.942,
-    "a#3": 233.082,
-    "a3": 220.000,
-    "rest": 0.00
+SCALE_RATIO = {  # 音階の比
+    "c": 0,
+    "c#": 1,
+    "d": 2,
+    "d#": 3,
+    "e": 4,
+    "f": 5,
+    "f#": 6,
+    "g": 7,
+    "g#": 8,
+    "a": 9,
+    "a#": 10,
+    "b": 11
 }
+
+
 VOLUME = 0.1  # 音の大きさ
 
 # リストは時間方向の流れを，タプルは和音を表す
@@ -45,21 +28,41 @@ MUSIC_SCORE = [(1, "b3", "d4"), (2, "b3", "g4"),  # アメイジンググレイ�
                (2, "b3", "g4"), (1, "c4", "e4"), (2, "b3", "d4")]
 
 
-def generate_music_wave(music_score, bpm):
+def make_note_freq(low_octave=2, high_octave=6):
+    '''
+    音名と周波数を対応づける辞書を作成する関数
+    返り値は{"音名":周波数,...}の辞書型
+
+    low_octave:一番低い音のオクターブ
+    high_octave:一番高い音のオクターブ
+    '''
+    # 音階名のリストを取得しておく，辞書のkeyの名前をつけるときに使う
+    scale_name_list = list(SCALE_RATIO.keys())
+    # オクターブと音階で二重ループを回してkey=音階名，value=周波数の辞書を生成
+    # 基準の音はA4=440Hz
+    note_freq_dic = {scale_name_list[cocoa] + str(chino):
+                     440 * 2 ** (chino - 4 + (cocoa - SCALE_RATIO['a']) / 12)
+                     for chino in range(low_octave, high_octave + 1)
+                     for cocoa in SCALE_RATIO.values()}
+    return note_freq_dic
+
+
+def generate_music_wave(music_score, bpm, note_freq):
     '''
     楽譜の波形を生成して返す関数です．
     返り値は1次元のndarray．
 
     music_score:楽譜，((音の長さ, "音階1", "音階2",...),...)で渡されるタプル型配列
     bpm:曲のテンポ
+    note_freq:音階名と周波数の対応表の辞書型
     '''
-    music_wave = [generate_note_wave(note, bpm)
+    music_wave = [generate_note_wave(note, bpm, note_freq)
                   for note in music_score]
     music_wave = np.concatenate(music_wave, axis=0)
     return music_wave
 
 
-def generate_note_wave(note, bpm):
+def generate_note_wave(note, bpm, note_freq):
     '''
     音符の波形を生成して返す関数です．
     返り値は1次元のndarray
@@ -68,6 +71,7 @@ def generate_note_wave(note, bpm):
     noteはたまに不快ネスト([(音の長さ1, "音階",...),...],[(音の長さ2, "音階"),...])
     となるのでそれを判断して分岐させる
     bpm:曲のテンポ
+    note_freq:音階名と周波数の対応表の辞書型
     '''
     # scoreからリストになっているやつらを抽出する
     # リストがあるということは，音の長さが違う和音が存在しているということ
@@ -76,7 +80,7 @@ def generate_note_wave(note, bpm):
     if alt_length_chord:
         # それぞれを楽譜とみなして別々に波形を生成
         alt_length_note = np.array([generate_music_wave(
-            rise, bpm) for rise in alt_length_chord])
+            rise, bpm, note_freq) for rise in alt_length_chord])
         # 別々に生成された波形を足し合わせて和音の波形ができる
         note_wave = np.sum(alt_length_note, axis=0)
         # できた和音の波形を返して終わり
@@ -84,7 +88,7 @@ def generate_note_wave(note, bpm):
 
     # 和音の長さが全部同じになったら波形を生成
     length = int(note[0] * (60 / bpm) * RATE)  # 音のなる長さ
-    factor = np.array([2 * np.pi * NOTE_FREQ[scale] /
+    factor = np.array([2 * np.pi * note_freq[scale] /
                        RATE for scale in note[1:]])
     # 音符の音の波形，二次元ndarray,行毎に和音の構成音の波形を表す
     note_wave = np.sin(factor[:, np.newaxis] * np.arange(length))
@@ -114,7 +118,8 @@ def play_sound(wave):
 
 
 def main():
-    wave = generate_music_wave(MUSIC_SCORE, 120)
+    note_freq = make_note_freq()  # 音階名と周波数の対応表，辞書型
+    wave = generate_music_wave(MUSIC_SCORE, 120, note_freq)
     play_sound(wave)
 
 
