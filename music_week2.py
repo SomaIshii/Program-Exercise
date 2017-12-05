@@ -3,6 +3,7 @@ import pyaudio
 
 RATE = 44100  # sample rate
 CHANNEL_NUM = 1  # チャンネル数 今回はモノラルなので1
+
 SCALE_RATIO = {  # 音の比
     "c": 0,
     "c#": 1,
@@ -22,10 +23,21 @@ SCALE_RATIO = {  # 音の比
 VOLUME = 0.1  # 音の大きさ
 
 # リストは時間方向の流れを，タプルは和音を表す
-MUSIC_SCORE = [(1, "b3", "d4"), (2, "b3", "g4"),  # アメイジンググレイスの楽譜
-               ([(2, "d4")], [(1, "b4"), (1, "g4")]),  # ここネスト多いけど大丈夫ですかね
-               (2, "d4", "b4"), (1, "c4", "a4"),
-               (2, "b3", "g4"), (1, "c4", "e4"), (2, "b3", "d4")]
+AMAZING_GRACE = [(1, "b3", "d4"), (2, "b3", "g4"),  # アメイジンググレイスの楽譜
+                 ([(2, "d4")], [(1, "b4"), (1, "g4")]),  # ネスト多いけど大丈夫？
+                 (2, "d4", "b4"), (1, "c4", "a4"),
+                 (2, "b3", "g4"), (1, "c4", "e4"), (2, "b3", "d4")]
+
+# カノンのメロディ部分の楽譜
+CANON_MELODY = [(2, "f4", "d5"), (2, "a4", "c5"), (2, "d4", "b4"),
+                (2, "f4", "a4"), (2, "b3", "g4"), (2, "d4", "f4"),
+                (2, "b3", "g4"), (2, "c4", "a4")]
+# カノンのベース部分の楽譜
+CANON_BASS = [(1, "d3"), (1, "f3"), (1, "a3"), (1, "g3"), (1, "f3"), (1, "d3"),
+              (1, "f3"), (1, "e3"), (1, "d3"), (1, "b2"), (1, "d3"), (1, "a2"),
+              (1, "g2"), (1, "b2"), (1, "c3"), (1, "a2")]
+# カノンの調，ニ長調
+CANON_KEY = ("#", "c", "f")
 
 
 def make_note_freq(music_key=[0], low_octave=2, high_octave=6):
@@ -54,6 +66,7 @@ def make_note_freq(music_key=[0], low_octave=2, high_octave=6):
     # 音名のリストを取得しておく，辞書のkeyの名前をつけるときに使う
     scale_ratio_list = scale_ratio.items()
     # オクターブと音階で二重ループを回してkey=音名，value=周波数の辞書を生成
+    # 2重ループがちょっと嫌．ndarrayとか使って一気に計算したほうがいいか？
     # 基準の音はA4=440Hz
     note_freq_dic = {scale + str(octave):
                      440 * 2 ** (octave - 4 + (ratio - scale_ratio['a']) / 12)
@@ -63,7 +76,7 @@ def make_note_freq(music_key=[0], low_octave=2, high_octave=6):
     return note_freq_dic
 
 
-def generate_music_wave(music_score, bpm, note_freq):
+def generate_music_wave(music_score, note_freq, bpm):
     '''
     楽譜の波形を生成して返す関数です．
     返り値は1次元のndarray．
@@ -72,13 +85,13 @@ def generate_music_wave(music_score, bpm, note_freq):
     bpm:曲のテンポ
     note_freq:音名と周波数の対応表の辞書型
     '''
-    music_wave = [generate_note_wave(note, bpm, note_freq)
+    music_wave = [generate_note_wave(note, note_freq, bpm)
                   for note in music_score]
     music_wave = np.concatenate(music_wave, axis=0)
     return music_wave
 
 
-def generate_note_wave(note, bpm, note_freq):
+def generate_note_wave(note, note_freq, bpm):
     '''
     音符の波形を生成して返す関数です．
     返り値は1次元のndarray
@@ -96,14 +109,17 @@ def generate_note_wave(note, bpm, note_freq):
     if alt_length_chord:
         # それぞれを楽譜とみなして別々に波形を生成
         alt_length_note = np.array([generate_music_wave(
-            rise, bpm, note_freq) for rise in alt_length_chord])
+            rise, note_freq, bpm) for rise in alt_length_chord])
         # 別々に生成された波形を足し合わせて和音の波形ができる
         note_wave = np.sum(alt_length_note, axis=0)
         # できた和音の波形を返して終わり
         return note_wave
 
     # 和音の長さが全部同じになったら波形を生成
-    length = int(note[0] * (60 / bpm) * RATE)  # 音のなる長さ
+
+    # intを二回つけてるのが嫌な感じがする
+    # こうしないと音符の長さが違う和音が来たときに配列の長さが合わなくてエラーを吐いてしまうが
+    length = int(note[0] * int((60 / bpm) * RATE))  # 音のなる長さ
     factor = np.array([2 * np.pi * note_freq[scale] /
                        RATE for scale in note[1:]])
     # 音符の音の波形，二次元ndarray,行毎に和音の構成音の波形を表す
@@ -134,8 +150,19 @@ def play_sound(wave):
 
 
 def main():
-    note_freq = make_note_freq()
-    wave = generate_music_wave(MUSIC_SCORE, 120, note_freq)
+    # Amazing Graceを演奏する
+    note_freq = make_note_freq(low_octave=3, high_octave=4)
+    wave = generate_music_wave(AMAZING_GRACE, note_freq, bpm=120)
+    play_sound(wave)
+
+    # Canonを演奏する
+    note_freq = make_note_freq(CANON_KEY, low_octave=2, high_octave=5)
+    # メロディ部の波形を生成
+    wave_melody = generate_music_wave(CANON_MELODY, note_freq, bpm=80)
+    # ベース部の波形を生成
+    wave_bass = generate_music_wave(CANON_BASS, note_freq, bpm=80)
+    # メロディとベースを合体
+    wave = wave_melody + wave_bass
     play_sound(wave)
 
 
