@@ -2,24 +2,20 @@ import numpy as np
 import pyaudio
 import re
 
-BASE_KEY_FACTOR = {  # ラの音を基準にしたときの半音の隔たり
-    'c': -9,
-    'd': -7,
-    'e': -5,
-    'f': -4,
-    'g': -2,
-    'a': 0,
-    'b': 2,
-}
-
-VOLUME = 0.1  # 音量
-CHANNEL_NUM = 1  # チャンネル数，今回はモノラルなので1
-
 
 class Note(object):
     """一つの音符を表すクラス
     音符の長さと音名をもとに音符の波形を生成する
     """
+    base_key_factor = {  # ラの音を基準にしたときの半音の隔たり
+        'c': -9,
+        'd': -7,
+        'e': -5,
+        'f': -4,
+        'g': -2,
+        'a': 0,
+        'b': 2,
+    }
 
     def __init__(self, scale, length=1):
         """引数から音符の周波数と長さをセットする．
@@ -34,7 +30,7 @@ class Note(object):
         key, accidental, octave_str = match.groups()
         octave = int(octave_str)
 
-        factor = BASE_KEY_FACTOR[key]
+        factor = self.__class__.base_key_factor[key]
 
         if accidental == '#':
             factor += 1
@@ -63,6 +59,9 @@ class Note(object):
 class SimpleMusic(object):
     """簡単な音楽を鳴らすクラス"""
 
+    volume = 0.1  # 音量
+    channel_num = 1  # チャンネル数，今回はモノラルなので1
+
     def __init__(self, bpm, rate=44100):
         """
         bpm:曲のテンポ，一分間に4分音符が何回なるか，dtype=int
@@ -86,43 +85,58 @@ class SimpleMusic(object):
         music_wave = np.concatenate(music_wave, axis=0)
 
         # 音量を変える
-        music_wave *= VOLUME
+        music_wave *= self.__class__.volume
+
         # pyaudioのストリームを開く
         # streamへ波形を書き込みすると音が出る
         pa = pyaudio.PyAudio()
-        stream = pa.open(format=pyaudio.paFloat32, channels=CHANNEL_NUM, rate=self.rate,
-                         output=True, frames_per_buffer=1024)
+        stream = pa.open(format=pyaudio.paFloat32,
+                         channels=self.__class__.channel_num,
+                         rate=self.rate, output=True, frames_per_buffer=1024)
 
         # 鳴らす
         # pyaudioでは波形を量子化ビット数32ビット，
         # 16進数表示でstreamに書き込むことで音を鳴らせる
         stream.write(music_wave.astype(np.float32).tostring())
 
+    @classmethod
+    def play_cdefgabc(cls, bpm):
+        """ドレミファソラシドを鳴らすメソッド
+        """
+        note_list = [Note("c4"), Note("d4"), Note("e4"), Note("f4"),
+                     Note("g4"), Note("a4"), Note("b4"), Note("c5")]
+        cdefgabc = cls(bpm)
+        for note in note_list:
+            cdefgabc.append_note(note)
+
+        cdefgabc.play()
+
+    @classmethod
+    def play_when_you_wish_upon_a_star(cls, bpm):
+        """「星に願いを」を演奏するメソッド
+        """
+        note_list = [Note("g4"), Note("g5"), Note("f5"), Note("e5"),
+                     Note("c#5"), Note("d5"), Note("a5", length=2),
+                     Note("b4"), Note("b5"), Note("a5"), Note("g5"),
+                     Note("f#5"), Note("g5"), Note("c6", length=2),
+                     Note("d6"), Note("c6"), Note("b5"), Note("a5"),
+                     Note("g5"), Note("f5"), Note("e5"), Note("d5"),
+                     Note("c6", length=2), Note("c6", length=2),
+                     Note("d6", length=4)]
+        when_you_wish_upon_a_star = cls(bpm)
+        for note in note_list:
+            when_you_wish_upon_a_star.append_note(note)
+
+        when_you_wish_upon_a_star.play()
+
 
 def main():
     # ドレミファソラシドを鳴らす
-    note_list = [Note("c4"), Note("d4"), Note("e4"), Note("f4"),
-                 Note("g4"), Note("a4"), Note("b4"), Note("c5")]
-    cdefgabc = SimpleMusic(bpm=120)
-    for note in note_list:
-        cdefgabc.append_note(note)
-
-    cdefgabc.play()
-
-    #「星に願いを」を流す
-    note_list = [Note("g4"), Note("g5"), Note("f5"), Note("e5"),
-                 Note("c#5"), Note("d5"), Note("a5", length=2),
-                 Note("b4"), Note("b5"), Note("a5"), Note("g5"),
-                 Note("f#5"), Note("g5"), Note("c6", length=2),
-                 Note("d6"), Note("c6"), Note("b5"), Note("a5"),
-                 Note("g5"), Note("f5"), Note("e5"), Note("d5"),
-                 Note("c6", length=2), Note("c6", length=2),
-                 Note("d6", length=4)]
-    when_you_wish_upon_a_star = SimpleMusic(bpm=90)
-    for note in note_list:
-        when_you_wish_upon_a_star.append_note(note)
-
-    when_you_wish_upon_a_star.play()
+    SimpleMusic.play_cdefgabc(bpm=100)
+    # 試しに音量変えてみる
+    SimpleMusic.volume = 0.5
+    # 「星に願いを」を鳴らす
+    SimpleMusic.play_when_you_wish_upon_a_star(bpm=500)
 
 
 if __name__ == '__main__':

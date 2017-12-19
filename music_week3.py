@@ -90,8 +90,8 @@ class SimpleMusic(object):
         # pyaudioのストリームを開く
         # streamへ波形を書き込みすると音が出る
         pa = pyaudio.PyAudio()
-        stream = pa.open(format=pyaudio.paFloat32, channels=CHANNEL_NUM, rate=self.rate,
-                         output=True, frames_per_buffer=1024)
+        stream = pa.open(format=pyaudio.paFloat32, channels=CHANNEL_NUM,
+                         rate=self.rate, output=True, frames_per_buffer=1024)
 
         # 鳴らす
         # pyaudioでは波形を量子化ビット数32ビット，
@@ -109,7 +109,7 @@ def main():
 
     cdefgabc.play()
 
-    #「星に願いを」を流す
+    # 「星に願いを」を流す
     note_list = [Note("g4"), Note("g5"), Note("f5"), Note("e5"),
                  Note("c#5"), Note("d5"), Note("a5", length=2),
                  Note("b4"), Note("b5"), Note("a5"), Note("g5"),
