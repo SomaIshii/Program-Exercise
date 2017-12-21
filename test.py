@@ -1,3 +1,16 @@
 # coding: utf-8
-a = [0 for rize in range(8)]
-print(a[5:7, 0:5])
+class Unko(object):
+    def __init__(self):
+        self.keben = 8
+
+    def unchi(self, geri):
+        geri = geri + 1
+        return geri
+
+    def gero(self):
+        b = self.unchi(self.keben)
+
+
+a = Unko()
+a.gero()
+print(a.keben)
