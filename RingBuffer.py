@@ -52,8 +52,8 @@ class RingBuffer(object):
         """先頭のitemを削除してそのitemを返すメソッド
         """
         popping_item = self.buffer[self.begin]
-        self.buffer[self.begin] = None
         if popping_item is not None:
+            self.buffer[self.begin] = None
             self.begin = self.move_cursor_to_right(self.begin)
         return popping_item
 
@@ -61,8 +61,8 @@ class RingBuffer(object):
         """最後尾のitemを削除してそのitemを返すメソッド
         """
         popping_item = self.buffer[self.end - 1]
-        self.buffer[self.end - 1] = None
         if popping_item is not None:
+            self.buffer[self.end - 1] = None
             self.end = self.move_cursor_to_left(self.end)
         return popping_item
 
