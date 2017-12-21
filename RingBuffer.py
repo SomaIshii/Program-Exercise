@@ -29,23 +29,43 @@ class RingBuffer(object):
         """リングバッファの先頭にitemを追加するメソッド
         item:追加したい要素
         """
+        # self.beginとself.endの指し示す位置を変更させる
+        self.end = 0 if self.end == self.max_index else self.end + 1
+        if self.buffer[self.end - 1] is not None:
+            self.begin = self.end
+
+        self.buffer[self.end - 1] = item
+
+    def get_list(self):
+        """リングバッファのbeginからendまでの配列を表示するリスト
+        """
+        if self.buffer[self.begin] is None:
+            print([])
+            return
+
+        if self.begin >= self.end:
+            begin_to_capacity = self.buffer[self.begin:]
+            zero_to_end = self.buffer[:self.end]
+            buffer_list = begin_to_capacity + zero_to_end
+            print(buffer_list)
+        else:
+            print(self.buffer[self.begin:self.end])
 
 
 def main():
     rize = RingBuffer(6)
-    rize.append_front(8)
+    rize.append_back(9)
+    rize.append_back(23)
+    rize.append_back(98)
+    rize.append_front(78)
+    rize.append_front(89)
+    rize.append_back(33)
+    rize.append_back(98)
     rize.append_front(3)
-    rize.append_front(5)
-    rize.append_front(5)
-    rize.append_front(2)
-    rize.append_front(189)
-    rize.append_front(98)
-    rize.append_front(98)
-    rize.append_front(98)
-    rize.append_front(98)
-    print(rize.buffer)
-    print(rize.begin)
-    print(rize.end)
+    rize.append_front(3)
+    rize.append_front(3)
+    rize.append_front(3)
+    rize.get_list()
 
 
 if __name__ == '__main__':
