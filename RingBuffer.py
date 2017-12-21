@@ -9,7 +9,7 @@ class RingBuffer(object):
         """
         capacity:リングバッファの容量，dtype=int
         """
-        self.buffer = [0 for rize in range(capacity)]  # リングバッファ本体
+        self.buffer = [None for rize in range(capacity)]  # リングバッファ本体
         self.max_index = capacity - 1  # self.bufferのインデックスの最大値
         self.begin = 0
         self.end = 0
@@ -18,21 +18,31 @@ class RingBuffer(object):
         """リングバッファの先頭にitemを追加するメソッド
         item:追加したい要素
         """
-        # beginとendの指し示す位置を変更する
+        # self.beginとself.endの指し示す位置を変更させる
         self.begin = self.max_index if self.begin == 0 else self.begin - 1
-        self.end = self.begin if self.end < self.begin else self.end
+        if self.buffer[self.begin] is not None:
+            self.end = self.begin
 
         self.buffer[self.begin] = item
 
+    def append_back(self, item):
+        """リングバッファの先頭にitemを追加するメソッド
+        item:追加したい要素
+        """
+
 
 def main():
-    rize = RingBuffer(5)
-    rize.append_front(9)
-    rize.append_front(1)
-    rize.append_front(2)
-    rize.append_front(7)
+    rize = RingBuffer(6)
+    rize.append_front(8)
     rize.append_front(3)
-    rize.append_front(4)
+    rize.append_front(5)
+    rize.append_front(5)
+    rize.append_front(2)
+    rize.append_front(189)
+    rize.append_front(98)
+    rize.append_front(98)
+    rize.append_front(98)
+    rize.append_front(98)
     print(rize.buffer)
     print(rize.begin)
     print(rize.end)
