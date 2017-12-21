@@ -36,35 +36,64 @@ class RingBuffer(object):
 
         self.buffer[self.end - 1] = item
 
+    def pop_front(self):
+        """先頭のitemを削除してそのitemを返すメソッド
+        """
+        popping_item = self.buffer[self.begin]
+        self.buffer[self.begin] = None
+        if popping_item is not None:
+            self.begin = 0 if self.begin == self.max_index else self.begin + 1
+
+        return popping_item
+
+    def pop_back(self):
+        """最後尾のitemを削除してそのitemを返すメソッド
+        """
+        popping_item = self.buffer[self.end - 1]
+        self.buffer[self.end - 1] = None
+        if popping_item is not None:
+            self.end = self.max_index if self.end == 0 else self.end - 1
+
+        return popping_item
+
     def get_list(self):
         """リングバッファのbeginからendまでの配列を表示するリスト
         """
         if self.buffer[self.begin] is None:
-            print([])
-            return
+            buffer_list = []
 
-        if self.begin >= self.end:
+        elif self.begin >= self.end:
             begin_to_capacity = self.buffer[self.begin:]
             zero_to_end = self.buffer[:self.end]
             buffer_list = begin_to_capacity + zero_to_end
-            print(buffer_list)
+
         else:
-            print(self.buffer[self.begin:self.end])
+            buffer_list = self.buffer[self.begin:self.end]
+
+        print(buffer_list)
 
 
 def main():
     rize = RingBuffer(6)
-    rize.append_back(9)
-    rize.append_back(23)
-    rize.append_back(98)
-    rize.append_front(78)
-    rize.append_front(89)
-    rize.append_back(33)
-    rize.append_back(98)
+    rize.get_list()
+    rize.append_front(1)
+    rize.append_front(2)
     rize.append_front(3)
-    rize.append_front(3)
-    rize.append_front(3)
-    rize.append_front(3)
+    rize.append_front(4)
+    rize.append_front(5)
+    rize.append_front(6)
+    print(rize.pop_front())
+    rize.get_list()
+    print(rize.pop_front())
+    rize.get_list()
+    print(rize.pop_back())
+    rize.get_list()
+    print(rize.pop_front())
+    rize.get_list()
+    print(rize.pop_back())
+    rize.get_list()
+    print(rize.pop_back())
+    print(rize.pop_back())
     rize.get_list()
 
 
